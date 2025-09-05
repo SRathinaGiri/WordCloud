@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Word Cloud Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=EB+Garamond&family=Impact&family=Lobster&family=Noto+Sans+Tamil&family=Oswald&family=Roboto:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        h1, h2 {
+            color: #0056b3;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1800px;
+            gap: 20px;
+        }
+        .input-section {
+            flex-shrink: 0;
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .output-section {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        label {
+            margin-top: 12px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            background-color: white;
+            font-size: 14px;
+        }
+        input[type="color"] {
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            width: 100%; height: 40px; padding: 0;
+            border: 1px solid #ccc; border-radius: 4px; cursor: pointer;
+        }
+        input[type="color"]::-webkit-color-swatch { border-radius: 3px; border: none; }
+        .size-inputs { display: flex; gap: 10px; }
+        textarea { height: 120px; resize: vertical; }
+        .button-group { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        button {
+            padding: 12px 20px; font-size: 16px; font-weight: bold;
+            color: white; border: none; border-radius: 5px;
+            cursor: pointer; transition: background-color 0.3s;
+        }
+        .generate-btn { background-color: #007bff; }
+        .generate-btn:hover { background-color: #0056b3; }
+        .save-btn { background-color: #28a745; }
+        .save-btn:hover { background-color: #1e7e34; }
+        svg { border: 1px solid #ccc; }
+        #creditDisplay {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Word Cloud Generator</h1>
+
+    <div class="container">
+        <div class="input-section">
+            <h2>Inputs</h2>
+            <div class="size-inputs">
+                <div><label for="centerWordInput">Center Word:</label><input type="text" id="centerWordInput" value="Teacher"></div>
+                <div><label for="centerWordSizeInput">Size:</label><input type="number" id="centerWordSizeInput" value="100"></div>
+            </div>
+            <label for="otherWordsInput">Surrounding Words:</label>
+            <textarea id="otherWordsInput" placeholder="Enter each word on a new line...">Education
+Knowledge
+Guidance
+Gratitude
+Learning
+Success
+Discipline
+Inspiration
+Patience
+Wisdom
+Future
+Growth
+Mentor
+Dedication</textarea>
+            <label>Canvas Size:</label>
+            <div class="size-inputs">
+                <input type="number" id="widthInput" value="1280">
+                <input type="number" id="heightInput" value="720">
+            </div>
+            <label for="rotationSelect">Rotation Style:</label>
+            <select id="rotationSelect">
+                <option value="varied">Varied Angles</option>
+                <option value="h_v">Horizontal & Vertical</option>
+                <option value="horizontal">Horizontal Only</option>
+            </select>
+            <label for="fontSelect">Quick Select Font:</label>
+            <select id="fontSelect">
+                <option value="Impact">Impact</option>
+                <option value="Anton">Anton</option>
+                <option value="Bebas Neue">Bebas Neue</option>
+                <option value="Lobster">Lobster</option>
+                <option value="Oswald">Oswald</option>
+                <option value="Roboto">Roboto</option>
+                <option value="EB Garamond">EB Garamond (Serif)</option>
+                <option value="Noto Sans Tamil">Noto Sans Tamil (Unicode)</option>
+            </select>
+            <label for="fontInput">Or Enter Font Name:</label>
+            <input type="text" id="fontInput" placeholder="e.g., Arial, Times New Roman">
+            <label for="bgColorPicker">Background Color:</label>
+            <input type="color" id="bgColorPicker" value="#FFFFFF">
+            <label for="creditInput">Credits:</label>
+            <input type="text" id="creditInput" value="Created by S. Rathinagiri & Designed by Gemini">
+            
+            <div class="button-group">
+                <button class="generate-btn" onclick="generateCloud()">Generate Word Cloud</button>
+                <button class="save-btn" onclick="saveAsSvg()">Save as SVG</button>
+                <button class="save-btn" onclick="saveAsPng()">Save as PNG</button>
+            </div>
+        </div>
+        <div class="output-section">
+             <div id="svg-container">
+                <svg id="word-cloud-svg"></svg>
+             </div>
+             <div id="creditDisplay"></div>
+        </div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/jasondavies/d3-cloud@v1.2.7/build/d3.layout.cloud.js"></script>
+
+    <script>
+        // --- Complete and final script ---
+
+        const FONT_URLS = {
+            "Anton": "https://fonts.gstatic.com/s/anton/v25/1Ptgg87LROyAm3Kz-C8.woff2",
+            "Bebas Neue": "https://fonts.gstatic.com/s/bebasneue/v10/JTUSjIg69CK48gW7PXooxW5ryg.woff2",
+            "EB Garamond": "https://fonts.gstatic.com/s/ebgaramond/v27/SlGDmQSNjdsmc35JDF1K5E55YMjF_Uqa1w.woff2",
+            "Lobster": "https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9zo-mM5Ez.woff2",
+            "Oswald": "https://fonts.gstatic.com/s/oswald/v53/TK3_WkUHHAIjg75cFRf3bXL8LICs13FvgUFoZAaRliE.woff2",
+            "Roboto": "https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2",
+            "Noto Sans Tamil": "https://fonts.gstatic.com/s/notosanstamil/v28/fkXDBHUBfr6-mb_KFy-icq7gS2aZp-lfcbcuz5c.woff2"
+        };
+
+        function getRotation(d, centerWord, method) {
+            if (d.text === centerWord) { return 0; }
+            switch (method) {
+                case 'h_v': return (~~(Math.random() * 2) * 90);
+                case 'varied': return (Math.random() - 0.5) * 120;
+                case 'horizontal': default: return 0;
+            }
+        }
+
+        function generateCloud() {
+            const centerWordText = document.getElementById('centerWordInput').value.trim();
+            const centerWordSize = +document.getElementById('centerWordSizeInput').value;
+            const otherWordsText = document.getElementById('otherWordsInput').value;
+            const width = +document.getElementById('widthInput').value;
+            const height = +document.getElementById('heightInput').value;
+            const rotationMethod = document.getElementById('rotationSelect').value;
+            const customFont = document.getElementById('fontInput').value.trim();
+            const selectedFont = document.getElementById('fontSelect').value;
+            const finalFont = customFont || selectedFont;
+            const bgColor = document.getElementById('bgColorPicker').value;
+            const creditText = document.getElementById('creditInput').value.trim();
+
+            document.getElementById('creditDisplay').textContent = creditText;
+            d3.select("#word-cloud-svg").style("background-color", bgColor);
+
+            const otherWordsArray = otherWordsText.split('\n').filter(word => word.trim() !== '');
+            const minSize = 15;
+            const maxSize = 55;
+            
+            let allWords = otherWordsArray.map(word => ({
+                text: word.trim(),
+                size: Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize
+            }));
+            if (centerWordText) { allWords.unshift({ text: centerWordText, size: centerWordSize }); }
+            
+            const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+            
+            const layout = d3.layout.cloud()
+                .size([width, height]).words(allWords)
+                .padding(5).rotate(d => getRotation(d, centerWordText, rotationMethod))
+                .font(finalFont).fontSize(d => d.size)
+                .on("end", draw);
+
+            layout.start();
+
+            function draw(drawnWords) {
+                d3.select("#word-cloud-svg").selectAll("g").remove();
+                d3.select("#word-cloud-svg")
+                    .attr("width", width).attr("height", height)
+                    .append("g").attr("transform", `translate(${width / 2},${height / 2})`)
+                    .selectAll("text").data(drawnWords)
+                    .enter().append("text")
+                    .style("font-size", d => d.size + "px")
+                    .style("font-family", finalFont)
+                    .style("fill", (d, i) => d.text === centerWordText ? "#0056b3" : colorScale(i))
+                    .attr("text-anchor", "middle")
+                    .attr("transform", d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
+                    .text(d => d.text);
+            }
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function getFontCSS(fontName, fontUrl) {
+            if (!fontUrl) return "";
+            try {
+                const response = await fetch(fontUrl);
+                const blob = await response.blob();
+                const dataUrl = await blobToBase64(blob);
+                return `@font-face { font-family: "${fontName}"; src: url(${dataUrl}); }`;
+            } catch (e) {
+                console.error("Error fetching font:", e);
+                return "";
+            }
+        }
+        
+        async function getSvgStringWithEmbeddedFont() {
+            const svgNode = d3.select("#word-cloud-svg").node();
+            const width = +document.getElementById('widthInput').value;
+            const height = +document.getElementById('heightInput').value;
+            const creditText = document.getElementById('creditInput').value.trim();
+            let svgString = new XMLSerializer().serializeToString(svgNode);
+            
+            const bgColor = document.getElementById('bgColorPicker').value;
+            const customFont = document.getElementById('fontInput').value.trim();
+            const selectedFont = document.getElementById('fontSelect').value;
+            const finalFont = customFont || selectedFont;
+            const fontCSS = await getFontCSS(finalFont, FONT_URLS[finalFont]);
+            
+            const creditSize = Math.max(12, width / 100);
+            const creditElement = creditText ? 
+                `<text x="${width - 15}" y="${height - 15}" text-anchor="end" font-family="Arial, sans-serif" font-size="${creditSize}px" fill="#555">${creditText}</text>` 
+                : "";
+
+            const style = `<style>svg{background-color: ${bgColor};} ${fontCSS}</style>`;
+            svgString = svgString.replace("</svg>", `${creditElement}</svg>`);
+            svgString = svgString.replace(">", `><defs>${style}</defs>`);
+
+            if (!svgString.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)) {
+                svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            return svgString;
+        }
+
+        async function saveAsSvg() {
+            const svgString = await getSvgStringWithEmbeddedFont();
+            const blob = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "wordcloud.svg";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function saveAsPng() {
+            const svgString = await getSvgStringWithEmbeddedFont();
+            const width = +document.getElementById('widthInput').value;
+            const height = +document.getElementById('heightInput').value;
+            
+            const img = new Image();
+            const svgBlob = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
+            const url = URL.createObjectURL(svgBlob);
+
+            img.onload = function() {
+                const canvas = document.createElement("canvas");
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                const pngUrl = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                link.href = pngUrl; link.download = "wordcloud.png";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+            img.src = url;
+        }
+        
+        window.onload = generateCloud;
+    </script>
+</body>
+</html>
