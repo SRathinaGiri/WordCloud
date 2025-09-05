@@ -2,7 +2,8 @@
 
 A fully browser-based, feature-rich tool to create beautiful and highly customizable word clouds. Built with HTML, CSS, and JavaScript, this project evolved from a simple Python script into a powerful, interactive web application.
 
-(Note: You should replace the image link above with a screenshot of your own generated word cloud!)
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2798fe87-e3da-42a1-b7b7-fa59049a9e44" />
+
 
 ✨ Features
 
